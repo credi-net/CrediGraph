@@ -18,8 +18,8 @@ from typing import (
 
 from tqdm import tqdm
 
-from tgrag.utils.domain_handler import reverse_domain
-from tgrag.utils.prob import (
+from credigraph.utils.domain_handler import reverse_domain
+from credigraph.utils.prob import (
     get_importance_node,
     get_importance_probability_node,
 )
