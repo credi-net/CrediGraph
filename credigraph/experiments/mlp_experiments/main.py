@@ -10,9 +10,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.neural_network import MLPRegressor
 from tqdm import tqdm
 
-from tgrag.utils.logger import setup_logging
-from tgrag.utils.path import get_root_dir
-from tgrag.utils.plot import plot_histogram, plot_loss, plot_regression_scatter
+from credigraph.utils.logger import setup_logging
+from credigraph.utils.path import get_root_dir
+from credigraph.utils.plot import (
+    plot_histogram,
+    plot_loss,
+    plot_regression_scatter,
+)
 
 parser = argparse.ArgumentParser(description='MLP Experiments')
 parser.add_argument(

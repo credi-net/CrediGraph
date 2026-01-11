@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import Tensor
 
-from tgrag.encoders.encoder import Encoder
+from credigraph.encoders.encoder import Encoder
 
 
 class CategoricalEncoder(Encoder):
