@@ -12,8 +12,8 @@ import pandas as pd
 import torch
 from tqdm import tqdm
 
-from tgrag.utils.domain_handler import normalize_domain
-from tgrag.utils.path import get_root_dir
+from credigraph.utils.domain_handler import normalize_domain
+from credigraph.utils.path import get_root_dir
 
 # For graphs
 # ----------

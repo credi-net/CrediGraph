@@ -2,24 +2,26 @@ import argparse
 import logging
 from typing import Dict, cast
 
-from tgrag.dataset.temporal_dataset import TemporalDataset
-from tgrag.encoders.categorical_encoder import CategoricalEncoder
-from tgrag.encoders.encoder import Encoder
-from tgrag.encoders.norm_encoding import NormEncoder
-from tgrag.encoders.pre_embedding_encoder import TextEmbeddingEncoder
-from tgrag.encoders.rni_encoding import RNIEncoder
-from tgrag.encoders.zero_encoder import ZeroEncoder
-from tgrag.experiments.gnn_experiments.gnn_experiment import run_gnn_baseline
-from tgrag.utils.args import parse_args
-from tgrag.utils.logger import setup_logging
-from tgrag.utils.path import get_root_dir, get_scratch
-from tgrag.utils.plot import (
+from credigraph.dataset.temporal_dataset import TemporalDataset
+from credigraph.encoders.categorical_encoder import CategoricalEncoder
+from credigraph.encoders.encoder import Encoder
+from credigraph.encoders.norm_encoding import NormEncoder
+from credigraph.encoders.pre_embedding_encoder import TextEmbeddingEncoder
+from credigraph.encoders.rni_encoding import RNIEncoder
+from credigraph.encoders.zero_encoder import ZeroEncoder
+from credigraph.experiments.gnn_experiments.gnn_experiment import (
+    run_gnn_baseline,
+)
+from credigraph.utils.args import parse_args
+from credigraph.utils.logger import setup_logging
+from credigraph.utils.path import get_root_dir, get_scratch
+from credigraph.utils.plot import (
     load_all_loss_tuples,
     plot_metric_across_models,
     plot_metric_per_encoder,
     plot_model_per_encoder,
 )
-from tgrag.utils.seed import seed_everything
+from credigraph.utils.seed import seed_everything
 
 parser = argparse.ArgumentParser(
     description='GNN Experiments.',

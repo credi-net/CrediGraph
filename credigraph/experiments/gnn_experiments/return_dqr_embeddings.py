@@ -9,15 +9,15 @@ import torch
 from torch_geometric.loader import NeighborLoader
 from tqdm import tqdm
 
-from tgrag.dataset.temporal_dataset import TemporalDataset
-from tgrag.encoders.encoder import Encoder
-from tgrag.encoders.rni_encoding import RNIEncoder
-from tgrag.gnn.model import Model
-from tgrag.utils.args import ModelArguments, parse_args
-from tgrag.utils.domain_handler import reverse_domain
-from tgrag.utils.logger import setup_logging
-from tgrag.utils.path import get_root_dir, get_scratch
-from tgrag.utils.seed import seed_everything
+from credigraph.dataset.temporal_dataset import TemporalDataset
+from credigraph.encoders.encoder import Encoder
+from credigraph.encoders.rni_encoding import RNIEncoder
+from credigraph.gnn.model import Model
+from credigraph.utils.args import ModelArguments, parse_args
+from credigraph.utils.domain_handler import reverse_domain
+from credigraph.utils.logger import setup_logging
+from credigraph.utils.path import get_root_dir, get_scratch
+from credigraph.utils.seed import seed_everything
 
 parser = argparse.ArgumentParser(
     description='Get final dqr node embeddings.',
