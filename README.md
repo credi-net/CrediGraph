@@ -1,6 +1,18 @@
-# CrediGraph
+<div align="center">
 
-<img src="img/logo_silver.png" alt="CrediGraph Logo" style="width: 300px; height: auto;" />
+## CrediGraph: Graph Construction for Network-Based Credibility Modelling
+
+<img src="img/logo_silver.png" alt="CrediGraph Logo" width="100" />
+
+### About CrediGraph
+
+We develop billion-scale data webgraphs and use them to assess credibility levels of websites, which can be used downstream to augment Retrieval-Augmented Generation robustness and fact-checking. **CrediGraph** is the graph construction pipelines which allows us to automatically source from monthly Common Crawl data, and produce processed webgraphs usable to train credibility models and otherwise analyse trust propagation on the web. 
+
+The **CrediBench** dataset, a benchmark of 6+ months of billion-scale webgraphs <br> constructed using the **CrediGraph** pipeline, are available on [Huggingface - CrediBench](https://huggingface.co/datasets/credi-net/CrediBench).
+
+</div>
+
+---
 
 ## Getting Started
 
