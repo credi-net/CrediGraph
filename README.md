@@ -2,7 +2,7 @@
 
 ## CrediGraph: Graph Construction for Network-Based Credibility Modelling
 
-<img src="img/logo_silver.png" alt="CrediGraph Logo" width="100" />
+<img src="img/credigraph.png" alt="CrediGraph Logo" width="100" />
 
 ### About CrediGraph
 
