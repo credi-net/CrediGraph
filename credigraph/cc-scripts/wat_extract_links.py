@@ -1,13 +1,15 @@
 import os
-import shutil
 import re
+import shutil
 from urllib.parse import urljoin, urlparse
 
 import idna
 from json_importer import json
 from pyspark.sql.types import StringType, StructField, StructType
 from sparkcc import CCSparkJob
+
 # os.environ["PYSPARK_SUBMIT_ARGS"] = "--driver-memory MEM 4g"
+
 
 class ExtractLinksJob(CCSparkJob):
     """Extract links from WAT files and redirects from WARC files
@@ -78,7 +80,7 @@ class ExtractLinksJob(CCSparkJob):
         pass
 
     def iterate_records(self, warc_uri, archive_iterator):
-        """Iterate over all WARC records and process them"""
+        """Iterate over all WARC records and process them."""
         self.processing_robotstxt_warc = (
             ExtractLinksJob.robotstxt_warc_path_pattern.match(warc_uri)
         )
@@ -138,7 +140,7 @@ class ExtractLinksJob(CCSparkJob):
 
     def process_redirect(self, record, stream, http_status_line):
         """Process redirects (HTTP status code 30[12378])
-        and yield redirect links
+        and yield redirect links.
         """
         line = stream.readline()
         while line:
@@ -171,7 +173,7 @@ class ExtractLinksJob(CCSparkJob):
             yield src, target
 
     def extract_http_header_links(self, url, headers):
-        """Extract links from WAT HTTP response headers"""
+        """Extract links from WAT HTTP response headers."""
         links = []
         for header in headers:
             header_name = header.lower()
@@ -318,9 +320,13 @@ class ExtractLinksJob(CCSparkJob):
     def run_job(self, session):
         output = None
 
-        session.sql("DROP TABLE IF EXISTS host_graph_output_vertices")
-        session.sql("DROP TABLE IF EXISTS host_graph_output_edges")
-        out_path = str(session.conf.get("spark.sql.warehouse.dir")).split(":")[-1] + "/" + self.args.output
+        session.sql('DROP TABLE IF EXISTS host_graph_output_vertices')
+        session.sql('DROP TABLE IF EXISTS host_graph_output_edges')
+        out_path = (
+            str(session.conf.get('spark.sql.warehouse.dir')).split(':')[-1]
+            + '/'
+            + self.args.output
+        )
         if os.path.exists(out_path):
             shutil.rmtree(out_path)
         if self.args.input != '':
@@ -614,7 +620,7 @@ class ExtractHostLinksJob(ExtractLinksJob):
             self.records_failed.add(1)
 
     def process_robotstxt(self, record, stream, _http_status_line):
-        """Process robots.txt and yield sitemap links"""
+        """Process robots.txt and yield sitemap links."""
         line = stream.readline()
         while line:
             if line == b'\r\n':
