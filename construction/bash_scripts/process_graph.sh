@@ -10,11 +10,11 @@ fi
 GRAPH_PATH="$1"
 SLICE="$2"
 MIN_DEG="$3"
-MEM="${4:-60%}"   
+MEM="${4:-60%}"
 
 uv run python - <<EOF
 from pathlib import Path
-from tgrag.construct_graph_scripts.process import process_graph  
+from credigraph.construct_graph_scripts.process import process_graph
 
 graph_path = "${GRAPH_PATH}"
 slice_str = "${SLICE}"
