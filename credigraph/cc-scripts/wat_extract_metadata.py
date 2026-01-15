@@ -107,7 +107,7 @@ class ExtractLinksJob(CCSparkJob):
         pass
 
     def iterate_records(self, warc_uri, archive_iterator):
-        """Iterate over all WARC records and process them"""
+        """Iterate over all WARC records and process them."""
         self.processing_robotstxt_warc = (
             ExtractLinksJob.robotstxt_warc_path_pattern.match(warc_uri)
         )

@@ -80,7 +80,7 @@ class ExtractLinksJob(CCSparkJob):
         pass
 
     def iterate_records(self, warc_uri, archive_iterator):
-        """Iterate over all WARC records and process them"""
+        """Iterate over all WARC records and process them."""
         self.processing_robotstxt_warc = (
             ExtractLinksJob.robotstxt_warc_path_pattern.match(warc_uri)
         )
@@ -140,7 +140,7 @@ class ExtractLinksJob(CCSparkJob):
 
     def process_redirect(self, record, stream, http_status_line):
         """Process redirects (HTTP status code 30[12378])
-        and yield redirect links
+        and yield redirect links.
         """
         line = stream.readline()
         while line:
@@ -173,7 +173,7 @@ class ExtractLinksJob(CCSparkJob):
             yield src, target
 
     def extract_http_header_links(self, url, headers):
-        """Extract links from WAT HTTP response headers"""
+        """Extract links from WAT HTTP response headers."""
         links = []
         for header in headers:
             header_name = header.lower()
@@ -620,7 +620,7 @@ class ExtractHostLinksJob(ExtractLinksJob):
             self.records_failed.add(1)
 
     def process_robotstxt(self, record, stream, _http_status_line):
-        """Process robots.txt and yield sitemap links"""
+        """Process robots.txt and yield sitemap links."""
         line = stream.readline()
         while line:
             if line == b'\r\n':

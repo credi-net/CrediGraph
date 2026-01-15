@@ -1,4 +1,4 @@
-"""This code is provided by scripts: https://github.com/commoncrawl/cc-pyspark"""
+"""This code is provided by scripts: https://github.com/commoncrawl/cc-pyspark."""
 
 import argparse
 import json
@@ -21,7 +21,7 @@ LOGGING_FORMAT = '%(asctime)s %(levelname)s %(name)s: %(message)s'
 
 class CCSparkJob(object):
     """A simple Spark job definition to process Common Crawl data
-    (WARC/WAT/WET files using Spark and warcio)
+    (WARC/WAT/WET files using Spark and warcio).
     """
 
     name = 'CCSparkJob'
@@ -55,7 +55,7 @@ class CCSparkJob(object):
     data_url_pattern = re.compile('^(s3|https?|file|hdfs):(?://([^/]*))?/(.*)')
 
     def parse_arguments(self):
-        """Returns the parsed arguments from the command line"""
+        """Returns the parsed arguments from the command line."""
         description = self.name
         if self.__doc__ is not None:
             description += ' - '
@@ -156,7 +156,7 @@ class CCSparkJob(object):
         return True
 
     def get_output_options(self):
-        """Convert output options strings (opt=val) to kwargs"""
+        """Convert output options strings (opt=val) to kwargs."""
         return {
             x[0]: x[1] for x in map(lambda x: x.split('=', 1), self.args.output_option)
         }
@@ -270,7 +270,7 @@ class CCSparkJob(object):
         return self.s3client
 
     def fetch_warc(self, uri, base_uri=None, offset=-1, length=-1):
-        """Fetch WARC/WAT/WET files (or a record if offset and length are given)"""
+        """Fetch WARC/WAT/WET files (or a record if offset and length are given)."""
         (scheme, netloc, path) = (None, None, None)
         uri_match = self.data_url_pattern.match(uri)
         if not uri_match and base_uri:
@@ -379,7 +379,7 @@ class CCSparkJob(object):
         return stream
 
     def process_warcs(self, _id, iterator):
-        """Process WARC/WAT/WET files, calling iterate_records(...) for each file"""
+        """Process WARC/WAT/WET files, calling iterate_records(...) for each file."""
         for uri in iterator:
             self.warc_input_processed.add(1)
             stream = self.fetch_warc(uri, self.args.input_base_url)
@@ -393,7 +393,7 @@ class CCSparkJob(object):
 
     def process_warc(self, uri, stream):
         """Parse a WARC (or WAT/WET file) using warcio,
-        call iterate_records() to process the WARC records
+        call iterate_records() to process the WARC records.
         """
         try:
             rec_iter = ArchiveIterator(
@@ -406,7 +406,7 @@ class CCSparkJob(object):
             self.get_logger().error('Invalid WARC: {} - {}'.format(uri, exception))
 
     def process_record(self, record):
-        """Process a single WARC/WAT/WET record"""
+        """Process a single WARC/WAT/WET record."""
         raise NotImplementedError('Processing record needs to be customized')
 
     def iterate_records(self, _warc_uri, archive_iterator):
@@ -438,24 +438,24 @@ class CCSparkJob(object):
 
     @staticmethod
     def is_response_record(record: ArcWarcRecord):
-        """Return true if WARC record is a WARC response record"""
+        """Return true if WARC record is a WARC response record."""
         return record.rec_type == 'response'
 
     @staticmethod
     def is_wet_text_record(record: ArcWarcRecord):
-        """Return true if WARC record is a WET text/plain record"""
+        """Return true if WARC record is a WET text/plain record."""
         return record.rec_type == 'conversion' and record.content_type == 'text/plain'
 
     @staticmethod
     def is_wat_json_record(record: ArcWarcRecord):
-        """Return true if WARC record is a WAT record"""
+        """Return true if WARC record is a WAT record."""
         return (
             record.rec_type == 'metadata' and record.content_type == 'application/json'
         )
 
     @staticmethod
     def is_html(record: ArcWarcRecord):
-        """Return true if (detected) MIME type of a record is HTML"""
+        """Return true if (detected) MIME type of a record is HTML."""
         html_types = ['text/html', 'application/xhtml+xml']
         if ('WARC-Identified-Payload-Type' in record.rec_headers) and (
             record.rec_headers['WARC-Identified-Payload-Type'] in html_types
@@ -470,7 +470,7 @@ class CCSparkJob(object):
 
 
 class CCIndexSparkJob(CCSparkJob):
-    """Process the Common Crawl columnar URL index"""
+    """Process the Common Crawl columnar URL index."""
 
     name = 'CCIndexSparkJob'
 
@@ -547,7 +547,7 @@ class CCIndexSparkJob(CCSparkJob):
 
 
 class CCIndexWarcSparkJob(CCIndexSparkJob):
-    """Process Common Crawl data (WARC records) found by the columnar URL index"""
+    """Process Common Crawl data (WARC records) found by the columnar URL index."""
 
     name = 'CCIndexWarcSparkJob'
 
@@ -649,7 +649,7 @@ class CCIndexWarcSparkJob(CCIndexSparkJob):
 
     def fetch_process_warc_records(self, rows):
         """Fetch and process WARC records specified by columns warc_filename,
-        warc_record_offset and warc_record_length in rows
+        warc_record_offset and warc_record_length in rows.
         """
         no_parse = not self.warc_parse_http_header
 
