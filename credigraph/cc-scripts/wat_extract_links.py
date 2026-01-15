@@ -1,13 +1,15 @@
 import os
-import shutil
 import re
+import shutil
 from urllib.parse import urljoin, urlparse
 
 import idna
 from json_importer import json
 from pyspark.sql.types import StringType, StructField, StructType
 from sparkcc import CCSparkJob
+
 # os.environ["PYSPARK_SUBMIT_ARGS"] = "--driver-memory MEM 4g"
+
 
 class ExtractLinksJob(CCSparkJob):
     """Extract links from WAT files and redirects from WARC files
@@ -318,9 +320,13 @@ class ExtractLinksJob(CCSparkJob):
     def run_job(self, session):
         output = None
 
-        session.sql("DROP TABLE IF EXISTS host_graph_output_vertices")
-        session.sql("DROP TABLE IF EXISTS host_graph_output_edges")
-        out_path = str(session.conf.get("spark.sql.warehouse.dir")).split(":")[-1] + "/" + self.args.output
+        session.sql('DROP TABLE IF EXISTS host_graph_output_vertices')
+        session.sql('DROP TABLE IF EXISTS host_graph_output_edges')
+        out_path = (
+            str(session.conf.get('spark.sql.warehouse.dir')).split(':')[-1]
+            + '/'
+            + self.args.output
+        )
         if os.path.exists(out_path):
             shutil.rmtree(out_path)
         if self.args.input != '':
