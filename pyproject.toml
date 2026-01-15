@@ -73,10 +73,10 @@ include_trailing_comma = true
 skip = [".gitignore", "__init__.py"]
 
 [tool.ruff]
+force-exclude = true
 extend-exclude = ['credigraph/cc-scripts/', 'test/']
 
 [tool.ruff.lint]
-extend-exclude = ['credigraph/cc-scripts/', 'test/']
 select = [
     "D",  # pydocstyle
 ]
