@@ -76,6 +76,7 @@ skip = [".gitignore", "__init__.py"]
 extend-exclude = ['credigraph/cc-scripts/', 'test/']
 
 [tool.ruff.lint]
+extend-exclude = ['credigraph/cc-scripts/', 'test/']
 select = [
     "D",  # pydocstyle
 ]
