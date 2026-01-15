@@ -2,9 +2,11 @@ import re
 from typing import Dict, List, Optional
 from urllib.parse import urlparse
 
+import pandas as pd
 import tldextract
 
 _extract = tldextract.TLDExtract(include_psl_private_domains=True)
+_DOMAIN_CLEAN_RE = re.compile(r'^https?://', re.IGNORECASE)
 
 
 def normalize_domain(d: str | None) -> str | None:
@@ -18,10 +20,23 @@ def normalize_domain(d: str | None) -> str | None:
         str or None
             Normalized domain string without "www." prefix.
     """
-    if not d:
+    if d is None:
         return None
-    d = d.lower().strip()
-    return d[4:] if d.startswith('www.') else d
+
+    if pd.isna(d):
+        return None
+
+    s = d.lower().strip()
+    s = _DOMAIN_CLEAN_RE.sub('', s)
+    s = s.split('/', 1)[0]
+    s = s.split('?', 1)[0]
+    s = s.split('#', 1)[0]
+    s = s.split(':', 1)[0]
+
+    if s.startswith('www.'):
+        s = s[4:]
+
+    return s or None
 
 
 def flip_if_needed(domain: str) -> str:
@@ -36,10 +51,14 @@ def flip_if_needed(domain: str) -> str:
         str
             Normalized domain in "domain.suffix" form.
     """
+    if pd.isna(domain):
+        return domain
+
+    domain = str(domain).strip('.').lower()
     if not domain:
         return domain
 
-    labels = [p for p in domain.strip('.').lower().split('.') if p]
+    labels = [p for p in domain.split('.') if p]
     if not labels:
         return domain
 
