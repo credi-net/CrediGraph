@@ -24,8 +24,7 @@ jobs:
         uses: astral-sh/ruff-action@v1
         with:
           changed-files: "true"
-
-          exclude: "credigraph/cc-scripts"
+          args: "check --exclude credigraph/cc-scripts"
 
       - name: "Run Ruff Formatter"
         uses: astral-sh/ruff-action@v3
