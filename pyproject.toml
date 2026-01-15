@@ -73,7 +73,7 @@ include_trailing_comma = true
 skip = [".gitignore", "__init__.py"]
 
 [tool.ruff]
-exclude = ['test']
+exclude = ['^credigraph/cc-scripts/', 'test']
 
 [tool.ruff.lint]
 select = [
