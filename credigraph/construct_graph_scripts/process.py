@@ -5,7 +5,6 @@
 # - Add timestamps to vertices and edges (outputs in csv.gz)
 
 import gzip
-import ipaddress
 import tempfile
 from pathlib import Path
 
@@ -17,24 +16,12 @@ from credigraph.utils.temporal_utils import iso_week_to_timestamp
 from credigraph.utils.writers import build_from_BCC, compute_degrees
 
 
-def is_numeric_address(s: str) -> bool:
-    """Return True if s is a numerical address (e.g, public IP)."""
-    try:
-        ipaddress.ip_address(s)
-        return True
-    except ValueError:
-        return False
-
-
 def normalize_endpoint(s: str) -> str | None:
     """Flip domain if needed and drop numeric addresses.
     Returns None if the endpoint should be discarded.
     """
     norm = normalize_domain(s)
     if norm is None:
-        return None
-
-    if is_numeric_address(norm):
         return None
 
     return flip_if_needed(norm)
