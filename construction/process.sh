@@ -18,7 +18,7 @@ CONSTRUCTION_DIR="$PROJECT_ROOT/construction"
 
 get_cc_indices() {
     uv run python -c "
-from tgrag.utils.temporal_utils import interval_to_CC_slices
+from credigraph.utils.temporal_utils import interval_to_CC_slices
 indices = interval_to_CC_slices(\"$1\", \"$2\")
 print(' '.join(indices))
 "

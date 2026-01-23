@@ -9,10 +9,22 @@ import tempfile
 from pathlib import Path
 
 from credigraph.utils.analytics import stats
+from credigraph.utils.domain_handler import flip_if_needed, normalize_domain
 from credigraph.utils.io import run_ext_sort
 from credigraph.utils.readers import line_reader
 from credigraph.utils.temporal_utils import iso_week_to_timestamp
 from credigraph.utils.writers import build_from_BCC, compute_degrees
+
+
+def normalize_endpoint(s: str) -> str | None:
+    """Flip domain if needed and drop numeric addresses.
+    Returns None if the endpoint should be discarded.
+    """
+    norm = normalize_domain(s)
+    if norm is None:
+        return None
+
+    return flip_if_needed(norm)
 
 
 def filter_domains_by_degree(
@@ -154,8 +166,22 @@ def process_graph(graph: str, slice_str: str, min_deg: int, mem: str = '60%') ->
     with tempfile.TemporaryDirectory(prefix='extsort_') as tdf:
         td = Path(tdf)
 
+        print('[STEP] normalizing edges')
+        edges_normalized = td / 'edges.normalized.tsv'
+        with open(edges_normalized, 'w') as fout:
+            for line in line_reader(edges_gz):
+                if line:
+                    try:
+                        raw_src, raw_dst = map(str.strip, line.split('\t', 1))
+                        norm_src = normalize_endpoint(raw_src)
+                        norm_dst = normalize_endpoint(raw_dst)
+                        if norm_src is not None and norm_dst is not None:
+                            fout.write(f'{norm_src}\t{norm_dst}\n')
+                    except ValueError:
+                        pass
+
         print('[STEP] computing initial degrees')
-        deg_tsv, E = compute_degrees(edges_gz, td, sort_cmd=sort_cmd, mem=mem)
+        deg_tsv, E = compute_degrees(edges_normalized, td, sort_cmd=sort_cmd, mem=mem)
 
         stats(deg_tsv, E, vertices_gz, sort_cmd=sort_cmd, mem=mem, tmpdir=td)
 
@@ -166,20 +192,9 @@ def process_graph(graph: str, slice_str: str, min_deg: int, mem: str = '60%') ->
         print(f'[INFO] kept domains (deg>{min_deg}): {kept:,}')
 
         print('[STEP] filtering edges')
-        edges_all = td / 'edges.tsv'
-        with open(edges_all, 'w') as fout:
-            for line in line_reader(edges_gz):
-                if line:
-                    try:
-                        src, dst = map(str.strip, line.split('\t', 1))
-                        if src and dst:
-                            fout.write(f'{src}\t{dst}\n')
-                    except ValueError:
-                        pass
-
         edges_src_kept = td / 'edges.src_kept.tsv'
         merge_join_filter_edges(
-            edges_all,
+            edges_normalized,
             kept_sorted,
             edges_src_kept,
             by_col=1,
