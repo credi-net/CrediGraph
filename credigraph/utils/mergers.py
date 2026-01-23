@@ -5,20 +5,19 @@ import csv
 import glob
 import gzip
 import os
+from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Dict, Set, Tuple
 
 from credigraph.utils.checkers import check_processed_labels
 from credigraph.utils.readers import (
-    collect_merged,
     line_reader,
     read_edge_file,
     read_reg_scores,
     read_vertex_file,
     read_weak_labels,
 )
-from credigraph.utils.writers import write_aggr_labelled
 
 # For graphs
 # ----------
@@ -162,7 +161,11 @@ def extract_all_domains(vertices: str, edges: str, out_txt: str) -> None:
 # ----------
 
 
-def merge_processed_labels(processed_dir: Path, output_csv: Path) -> None:
+def merge_processed_labels(
+    processed_dir: Path,
+    output_csv: Path,
+    annotated_csv: Path | None = None,
+) -> None:
     """Merge multiple processed label CSVs into a single aggregated output file.
 
     Parameters:
@@ -174,10 +177,53 @@ def merge_processed_labels(processed_dir: Path, output_csv: Path) -> None:
     Returns:
         None
     """
-    csv_paths = list(processed_dir.glob('*.csv'))
-    domain_labels = collect_merged(csv_paths, output_csv)
-    write_aggr_labelled(domain_labels, output_csv)
+    csv_paths = sorted(processed_dir.glob('*.csv'))
+
+    per_domain: dict[str, dict[str, float]] = defaultdict(dict)
+
+    for csv_path in csv_paths:
+        dataset = csv_path.stem
+
+        with csv_path.open('r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                domain = row.get('domain')
+                label = row.get('label')
+
+                if domain is None or label is None:
+                    continue
+
+                try:
+                    per_domain[domain][dataset] = float(label)
+                except ValueError:
+                    continue
+
+    weak_labels: dict[str, int] = {}
+
+    for domain, sources in per_domain.items():
+        avg = sum(sources.values()) / len(sources)
+        weak_labels[domain] = 1 if avg >= 0.5 else 0
+
+    with output_csv.open('w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['domain', 'weak_label'])
+        for domain in sorted(weak_labels):
+            writer.writerow([domain, weak_labels[domain]])
+
     check_processed_labels(output_csv)
+
+    if annotated_csv is not None:
+        datasets = sorted({d for m in per_domain.values() for d in m})
+
+        with annotated_csv.open('w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['domain', 'weak_label', *datasets])
+
+            for domain in sorted(per_domain):
+                row_data: list[object] = [domain, weak_labels[domain]]
+                for ds in datasets:
+                    row_data.append(per_domain[domain].get(ds, ''))
+                writer.writerow(row_data)
 
 
 def merge_reg_class(

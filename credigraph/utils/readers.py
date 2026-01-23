@@ -468,32 +468,26 @@ def read_reg_scores(path: Path, score_col: str = 'pc1') -> dict[str, float]:
     return result
 
 
-def collect_merged(paths: Iterable[Path], output_csv: Path) -> dict[str, list[float]]:
-    """Collect and aggregate domain labels from multiple CSV files that have labelled domains.
-
-    Parameters:
-        paths : iterable of pathlib.Path
-            Input CSV file paths containing at least columns "domain" and "label".
-        output_csv : pathlib.Path
-            Path to the output CSV file (excluded from reading).
-
-    Returns:
-        dict[str, list[float]]
-            Mapping from domain string to a list of numeric label values.
-    """
-    domain_labels: dict[str, list[float]] = defaultdict(list)
+def collect_merged(
+    paths: Iterable[Path],
+    output_csv: Path,
+) -> dict[str, dict[str, float]]:
+    """Domain -> { dataset_name -> label }."""
+    merged: dict[str, dict[str, float]] = defaultdict(dict)
 
     for path in paths:
         if path.name == output_csv.name:
             continue
+
+        dataset = path.stem
 
         for row in _csv_rows(path):
             d = normalize_domain(row.get('domain'))
             l = row.get('label')
             if d and l is not None:
                 try:
-                    domain_labels[d].append(float(l))
+                    merged[d][dataset] = float(l)
                 except ValueError:
                     continue
 
-    return domain_labels
+    return merged

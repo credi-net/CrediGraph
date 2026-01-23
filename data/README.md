@@ -18,13 +18,13 @@ Other regression labels we don't use yet:
 
 ## Weak labels
 
-Standardized into: 0 = Phishing, 1 = Legitimate, with headers `domain` and `label`. The label counts shown below follow this convention.
+Standardized into: 0 = Unreliable, 1 = Reliable, with headers `domain` and `label`. The label counts shown below follow this convention.
 
 **Total:**
 
 ```bash
-0: 325792
-1: 306240
+  0: 361537
+  1: 313199
 ```
 
 In terms of comparing the size of our strong label set (DQR) and our weak label set (see below),
@@ -99,4 +99,13 @@ i.e, more than half of the strong labels are present in the weak label set.
 ```bash
 0: 2170
 1: 2597
+```
+
+### Malware domains
+
+[URLHaus](https://urlhaus.abuse.ch) is a collection of malware domains.
+
+```bash
+0: 31540
+1: 0
 ```
