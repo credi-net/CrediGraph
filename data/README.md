@@ -2,11 +2,11 @@
 
 The `labels.py` script lists all datasets used in this work and their features as per their documentation. Note that size may change from what is indicated there in the processed files we end up using due to the processing (e.g, if a blacklist is URL-based, we average the scoring for all URLs that resolve to the same domain).
 
-Below is some more information about the processing of the data we use as labels.
+Below is some more information about the processing of the data we use as labels. These include two datasets: DQR for continuous, expert-driven credibility labels; and DomainRel for binary reliability scores across domains. 
 
-## `DQR`
+## Continuous scores (Regression)  
 
-We use this data as it is, as our ground truth supervised labels.
+We use [DQR](https://github.com/hauselin/domain-quality-ratings/tree/main/data) as the main data source for now, and use it as our ground truth supervised labels for regression.
 
 Other regression labels we don't use yet:
 
@@ -16,9 +16,9 @@ Other regression labels we don't use yet:
 - [Consensus Credibility](https://science.feedback.org/consensus-credibility-scores-comprehensive-dataset-web-domains-credibility) pending access
 - [Open Feedback](https://open.feedback.org/) pending request
 
-## Weak labels
+## Discrete scores (Binary Classification). 
 
-Standardized into: 0 = Unreliable, 1 = Reliable, with headers `domain` and `reliability`. The label counts shown below follow this convention.
+Standardized into: 0 = Unreliable, 1 = Reliable, with headers `domain` and `reliability`. The label counts shown below follow this convention. We use these labels for classification. 
 
 **Total:**
 
