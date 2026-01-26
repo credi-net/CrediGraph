@@ -18,7 +18,7 @@ Other regression labels we don't use yet:
 
 ## Weak labels
 
-Standardized into: 0 = Unreliable, 1 = Reliable, with headers `domain` and `label`. The label counts shown below follow this convention.
+Standardized into: 0 = Unreliable, 1 = Reliable, with headers `domain` and `reliability`. The label counts shown below follow this convention.
 
 **Total:**
 
@@ -26,17 +26,6 @@ Standardized into: 0 = Unreliable, 1 = Reliable, with headers `domain` and `labe
   0: 361537
   1: 313199
 ```
-
-In terms of comparing the size of our strong label set (DQR) and our weak label set (see below),
-
-```bash
-# strong: 11519
-# weak: 632014
-# overlap: 6079
-# union: 637454
-```
-
-i.e, more than half of the strong labels are present in the weak label set.
 
 ### LegitPhish
 
