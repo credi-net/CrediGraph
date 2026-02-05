@@ -2,12 +2,29 @@ import csv
 import re
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Set
+from typing import List, Optional
 
-from credigraph.utils.checkers import check_processed_labels, is_valid_domain
+from credigraph.utils.checkers import check_processed_labels
 from credigraph.utils.domain_handler import extract_domain
-from credigraph.utils.mergers import merge_processed_labels, merge_reg_class
-from credigraph.utils.readers import read_reg_scores, read_weak_labels
+
+domains = {
+    'general': [
+        'wikipedia',
+    ],
+    'misinformation': [
+        'misinfo-domains',
+        'nelez',
+    ],
+    'phishing': [
+        'phish-and-legit',
+        'url-phish',
+        'phish-dataset',
+        'legit-phish',
+    ],
+    'malware': [
+        'urlhaus',
+    ],
+}
 
 
 def process_csv(
@@ -18,32 +35,8 @@ def process_csv(
     label_col: str,
     inverse: bool = False,
     labels: Optional[List] = None,
-) -> Dict[str, float]:
-    """Process a labeled CSV into a domain-level binary label file.
-
-    Aggregates labels per domain, averages them, thresholds at 0.5 to form a
-    binary label, and optionally inverts the result.
-
-    Parameters:
-        input_csv : Path
-            Path to the input CSV file.
-        output_csv : Path
-            Path where the processed CSV will be written.
-        is_url : bool
-            Whether the domain column contains full URLs that must be normalized.
-        domain_col : str
-            Name of the column containing domains or URLs.
-        label_col : str
-            Name of the column containing labels.
-        inverse : bool, optional
-            Whether to invert the final binary label.
-        labels : Optional[List], optional
-            Optional mapping for categorical labels, e.g. [negative_label, positive_label].
-
-    Returns:
-        Dict[str, float]
-            Mapping from domain to average label (before binary conversion).
-    """
+) -> dict:
+    """Process CSV and return stats: {total: count, label_0: count, label_1: count}."""
     domain_labels = defaultdict(list)
 
     with input_csv.open('r', encoding='utf-8') as f:
@@ -59,9 +52,6 @@ def process_csv(
             if is_url:
                 domain = extract_domain(domain)
 
-            if not is_valid_domain(domain):
-                continue
-
             score = label
             if labels is not None:
                 if label == labels[0]:
@@ -76,47 +66,33 @@ def process_csv(
             except ValueError:
                 continue
 
-    domain_averages = {}
-
+    label_counts = {0: 0, 1: 0}
     with output_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['domain', 'label'])
 
-        for domain, label_list in domain_labels.items():
-            if not label_list:
+        for domain, labels in domain_labels.items():
+            if not labels:
                 continue
 
-            avg_label = sum(label_list) / len(label_list)
-            domain_averages[domain] = avg_label
+            avg_label = sum(labels) / len(labels)
             binary_label = 1 if avg_label >= 0.5 else 0
             if inverse:
                 binary_label = 1 - binary_label
+            label_counts[binary_label] += 1
             writer.writerow([domain, binary_label])
 
     check_processed_labels(output_csv)
     return {
-        domain: avg for domain, avg in domain_averages.items() if domain is not None
+        'total': len(domain_labels),
+        'label_0': label_counts[0],
+        'label_1': label_counts[1],
     }
 
 
-def process_unlabelled_csv(
-    input_path: Path, output_csv: Path, is_legit: bool
-) -> Dict[str, float]:
-    """Process an unlabeled domain list into a labeled CSV, all with same label depending on ``is_legit``.
-
-    Parameters:
-        input_path : Path
-            Path to the input text or CSV file containing domains.
-        output_csv : Path
-            Path where the processed CSV will be written.
-        is_legit : bool
-            If True, assigns label 1; otherwise assigns label 0.
-
-    Returns:
-        Dict[str, float]
-            Mapping from domain to its label (as float).
-    """
-    label = 1.0 if is_legit else 0.0
+def process_unlabelled_csv(input_path: Path, output_csv: Path, is_legit: bool) -> dict:
+    """Process unlabelled CSV and return stats: {total: count, label_0: count, label_1: count}."""
+    label = 1 if is_legit else 0
 
     domains = set()
 
@@ -129,40 +105,30 @@ def process_unlabelled_csv(
             line = re.sub(r'\s*\(.*?\)\s*$', '', line)
             domain = line.split()[0].lower()
 
-            if not is_valid_domain(domain):
-                continue
-
             if domain:
                 domains.add(domain)
-
-    domain_scores = {domain: label for domain in domains}
 
     with output_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['domain', 'label'])
 
         for domain in sorted(domains):
-            writer.writerow([domain, int(label)])
+            writer.writerow([domain, label])
 
     check_processed_labels(output_csv)
-    return domain_scores
+    label_0_count = len(domains) if label == 0 else 0
+    label_1_count = len(domains) if label == 1 else 0
+    return {
+        'total': len(domains),
+        'label_0': label_0_count,
+        'label_1': label_1_count,
+    }
 
 
-def process_goggle(goggle_path: Path, output_csv: Path) -> Dict[str, float]:
-    """Process a .goggle rules file into a domain-level label CSV.
-
-    Parameters:
-        goggle_path : Path
-            Path to the .goggle configuration file.
-        output_csv : Path
-            Path where the processed CSV will be written.
-
-    Returns:
-        Dict[str, float]
-            Mapping from domain to its label (as float).
-    """
+def process_goggle(goggle_path: Path, output_csv: Path) -> dict:
+    """Process goggle file and return stats: {total: count, label_0: count, label_1: count}."""
     rows = []
-    domain_scores = {}
+    label_counts = {0: 0, 1: 0}
 
     with goggle_path.open('r', encoding='utf-8') as f:
         for line in f:
@@ -171,9 +137,9 @@ def process_goggle(goggle_path: Path, output_csv: Path) -> Dict[str, float]:
                 continue
 
             if line.startswith('$boost=2'):
-                label = 1.0
+                label = 1
             elif line.startswith('$discard'):
-                label = 0.0
+                label = 0
             else:
                 # ignore $downrank
                 continue
@@ -185,8 +151,8 @@ def process_goggle(goggle_path: Path, output_csv: Path) -> Dict[str, float]:
                 continue
 
             domain = site_part.split('=', 1)[1]
-            rows.append((domain, int(label)))
-            domain_scores[domain] = label
+            rows.append((domain, label))
+            label_counts[label] += 1
 
     with output_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
@@ -194,180 +160,257 @@ def process_goggle(goggle_path: Path, output_csv: Path) -> Dict[str, float]:
         writer.writerows(rows)
 
     check_processed_labels(output_csv)
-    return domain_scores
+    return {
+        'total': len(rows),
+        'label_0': label_counts[0],
+        'label_1': label_counts[1],
+    }
 
 
-def process_urlhaus(urlhaus_path: Path, output_csv: Path) -> Dict[str, float]:
-    """Process URLHaus malware database into a domain-level label CSV.
+def collect_merged(paths: list[Path], output_csv: Path) -> dict[str, list[float]]:
+    domain_labels: dict[str, list[float]] = defaultdict(list)
 
-    Marks domains with 'malware_download' threat as unreliable (0).
-    Extracts domain names from URLs.
+    for csv_path in paths:
+        if csv_path.name == output_csv.name:
+            continue
 
-    Parameters:
-        urlhaus_path : Path
-            Path to the URLHaus CSV file.
-        output_csv : Path
-            Path where the processed CSV will be written.
+        with csv_path.open('r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
 
-    Returns:
-        Dict[str, float]
-            Mapping from domain to its label (as float).
-    """
-    domains = set()
+            for row in reader:
+                domain = row.get('domain')
+                if type(domain) == str and domain.startswith('www.'):
+                    domain = domain[4:]
+                label = row.get('label')
 
-    with urlhaus_path.open('r', encoding='utf-8') as f:
-        reader = csv.DictReader(f, skipinitialspace=True)
+                if not domain or label is None:
+                    continue
 
-        for row in reader:
-            url = row.get('url')
-            threat = row.get('threat')
+                try:
+                    domain_labels[domain].append(float(label))
+                except ValueError:
+                    continue
 
-            if not url or threat is None:
-                continue
+    return domain_labels
 
-            if threat != 'malware_download':
-                continue
 
-            domain = extract_domain(url)
-            if not is_valid_domain(domain):
-                continue
-            if domain:
-                domains.add(domain)
+def collect_merged_annotated(
+    paths: list[Path],
+    output_csv: Path,
+) -> dict[str, dict[str, float]]:
+    """Collect merged labels while tracking which dataset each came from."""
+    domain_labels: dict[str, dict[str, float]] = defaultdict(
+        dict
+    )  # domain -> {dataset_name: score}
 
-    domain_scores = {domain: 0.0 for domain in domains}
+    for csv_path in paths:
+        if csv_path.name == output_csv.name:
+            continue
+        # Also skip labels.csv (the merged weak labels)
+        if csv_path.name == 'labels.csv':
+            continue
 
+        # Extract dataset name from filename (remove .csv)
+        dataset_name = csv_path.stem
+
+        with csv_path.open('r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+
+            for row in reader:
+                domain = row.get('domain')
+                if type(domain) == str and domain.startswith('www.'):
+                    domain = domain[4:]
+                label = row.get('label')
+
+                if not domain or label is None:
+                    continue
+
+                try:
+                    domain_labels[domain][dataset_name] = float(label)
+                except ValueError:
+                    continue
+
+    return domain_labels
+
+
+def write_merged(domain_labels: dict[str, list[float]], output_csv: Path) -> None:
     with output_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(['domain', 'label'])
 
-        for domain in sorted(domains):
-            writer.writerow([domain, 0])
+        for domain, labels in sorted(domain_labels.items()):
+            if not labels:
+                continue
 
-    check_processed_labels(output_csv)
-    return domain_scores
+            avg_label = sum(labels) / len(labels)
+            final_label = 1 if avg_label >= 0.5 else 0
+            writer.writerow([domain, final_label])
 
 
-def create_merged_annotated(
-    final_domains: List[str],
-    dataset_sources: Dict[str, Dict[str, float]],
+def write_merged_annotated(
+    domain_labels_dict: dict[str, dict[str, float]],
     output_csv: Path,
-    weak_labels: Dict[str, int],
-    reg_scores: Dict[str, float],
+    dataset_names: list[str],
 ) -> None:
-    """Create an annotation CSV tracking original source labels for each domain.
-
-    Parameters:
-        dataset_sources : Dict[str, Dict[str, float]]
-            Mapping from dataset name to mapping of domain to original score.
-        output_csv : Path
-            Path where the annotation CSV will be written.
-        weak_labels : Optional[Dict[str, int]], optional
-            Final aggregated weak labels per domain.
-        reg_scores : Optional[Dict[str, float]], optional
-            Regression scores per domain.
-    """
-    all_domains: Set[str] = set()
-    for domain_map in dataset_sources.values():
-        for domain in domain_map.keys():
-            if domain and is_valid_domain(domain):
-                all_domains.add(domain)
-
-    if weak_labels:
-        all_domains.update(d for d in weak_labels if is_valid_domain(d))
-
-    if reg_scores:
-        all_domains.update(d for d in reg_scores if is_valid_domain(d))
-
-    all_domains_list = sorted(all_domains)
-    dataset_names = sorted(dataset_sources.keys())
-
+    """Write labels with one column per dataset."""
     with output_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
+        writer.writerow(['domain'] + dataset_names)
 
-        extra_cols: List[str] = []
-        if weak_labels is not None:
-            extra_cols.append('weak_label')
-        if reg_scores is not None:
-            extra_cols.append('reg_score')
-
-        header = ['domain'] + dataset_names + extra_cols
-        writer.writerow(header)
-
-        for domain in all_domains_list:
-            row = [domain]
+        for domain in sorted(domain_labels_dict.keys()):
+            labels_dict = domain_labels_dict[domain]
+            row: list[str | float] = [domain]
             for dataset_name in dataset_names:
-                score = dataset_sources[dataset_name].get(domain, '')
-                row.append(str(score))
-            if weak_labels is not None:
-                row.append(str(weak_labels.get(domain, '')))
-            if reg_scores is not None:
-                row.append(str(reg_scores.get(domain, '')))
+                score = labels_dict.get(dataset_name)
+                row.append(score if score is not None else '')
             writer.writerow(row)
 
-    print(f'[INFO] Created annotations CSV: {output_csv}')
-    print(f'[INFO]   Total domains: {len(all_domains)}')
-    print(f'[INFO]   Datasets tracked: {len(dataset_names)}')
+
+def merge_processed_labels(
+    processed_dir: Path, output_csv: Path, output_annot_csv: Path
+) -> None:
+    csv_paths = list(processed_dir.glob('*.csv'))
+    # Collect both merged and annotated versions
+    domain_labels = collect_merged(csv_paths, output_csv)
+    domain_labels_annot = collect_merged_annotated(csv_paths, output_annot_csv)
+    # Write both at the same time
+    write_merged(domain_labels, output_csv)
+    check_processed_labels(output_csv)
+    # Get dataset names from annotated data
+    dataset_names = sorted(
+        set().union(*[d.keys() for d in domain_labels_annot.values()])
+    )
+    write_merged_annotated(domain_labels_annot, output_annot_csv, dataset_names)
+    # Don't check labels_annot.csv as it has different schema with many empty values
 
 
-def create_labels_csv(
-    dataset_sources: Dict[str, Dict[str, float]],
-    reg_scores: Dict[str, float],
+def read_weak_labels(path: Path) -> dict[str, int]:
+    weak = {}
+    with path.open('r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            d = row.get('domain')
+            l = row.get('label')
+            if not d or l is None:
+                continue
+            if d.startswith('www.'):
+                d = d[4:]
+            weak[d] = int(l)
+    return weak
+
+
+def read_reg_scores(path: Path, score_col: str = 'pc1') -> dict[str, float]:
+    reg = {}
+    with path.open('r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            d = row.get('domain')
+            s = row.get(score_col)
+            if not d or s is None:
+                continue
+            if d.startswith('www.'):
+                d = d[4:]
+            try:
+                reg[d] = float(s)
+            except ValueError:
+                continue
+    return reg
+
+
+def merge_reg_class(
+    weak_labels_csv: Path,
+    reg_csv: Path,
     output_csv: Path,
 ) -> None:
-    """Create final labels.csv with:
-    - domain
-    - credibility (regression average)
-    - reliability (binary, thresholded using mean regression score).
+    """Final output schema:
+    domain, weak_label, reg_score
+        - Many domains only have one of the two, then the other is None.
     """
-    # --- collect all domains ---
-    all_domains: Set[str] = set()
-    for src in dataset_sources.values():
-        all_domains.update(d for d in src if is_valid_domain(d))
-    all_domains.update(d for d in reg_scores if is_valid_domain(d))
+    weak = read_weak_labels(weak_labels_csv)
+    reg = read_reg_scores(reg_csv)
 
-    # --- regression credibility ---
-    credibility: Dict[str, float] = {}
-    for domain, score in reg_scores.items():
-        if is_valid_domain(domain):
-            credibility[domain] = float(score)
+    all_domains = sorted(set(weak) | set(reg))
 
-    # --- global threshold from regression ---
-    if credibility:
-        threshold = sum(credibility.values()) / len(credibility)
-    else:
-        raise ValueError('No regression scores available to compute threshold.')
-
-    # --- classification reliability ---
-    reliability: Dict[str, int] = {}
-    for domain in all_domains:
-        cls_scores: List[float] = []
-        for src in dataset_sources.values():
-            if domain in src:
-                cls_scores.append(src[domain])
-
-        if not cls_scores:
-            continue
-
-        avg_cls = sum(cls_scores) / len(cls_scores)
-        reliability[domain] = 1 if avg_cls >= threshold else 0
-
-    # --- write CSV ---
     with output_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(['domain', 'credibility', 'reliability'])
+        writer.writerow(['domain', 'weak_label', 'reg_score'])
 
-        for domain in sorted(all_domains):
+        for domain in all_domains:
             writer.writerow(
                 [
                     domain,
-                    credibility.get(domain, ''),
-                    reliability.get(domain, ''),
+                    weak.get(domain),
+                    reg.get(domain),
                 ]
             )
 
-    print(f'[INFO] Created labels CSV: {output_csv}')
-    print(f'[INFO]   Threshold (mean regression): {threshold:.4f}')
-    print(f'[INFO]   Total domains: {len(all_domains)}')
+
+def _load_domains(path: Path, domain_col: str = 'domain') -> set:
+    domains = set()
+    with path.open('r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            d = row.get(domain_col)
+            if not d:
+                continue
+            if d.startswith('www.'):
+                d = d[4:]
+            domains.add(d)
+    return domains
+
+
+def print_domain_composition(dataset_stats: dict, domains_mapping: dict) -> None:
+    """Print a summary table of domain composition per scope with 0-1 breakdown.
+
+    For each scope in domains_mapping (general, misinformation, phishing, malware),
+    print the number of domains in each dataset belonging to that scope, with label breakdown.
+
+    Args:
+        dataset_stats: dict mapping dataset_name -> {total, label_0, label_1}
+        domains_mapping: dict mapping scope -> list of dataset_names
+    """
+    print('\n======== Domain Composition Summary =========')
+    for scope, dataset_names in domains_mapping.items():
+        print(f'\n{scope.upper()}:')
+        print('-' * 80)
+
+        # Collect counts for datasets in this scope
+        print(f"{'Dataset':<30} {'Count':>10} {'Label 0':>10} {'Label 1':>10}")
+        total = 0
+        total_0 = 0
+        total_1 = 0
+        for dataset_name in dataset_names:
+            stats = dataset_stats.get(
+                dataset_name, {'total': 0, 'label_0': 0, 'label_1': 0}
+            )
+            count = stats['total']
+            label_0 = stats['label_0']
+            label_1 = stats['label_1']
+            print(f'{dataset_name:<30} {count:>10} {label_0:>10} {label_1:>10}')
+            total += count
+            total_0 += label_0
+            total_1 += label_1
+        print(f"{'TOTAL':<30} {total:>10} {total_0:>10} {total_1:>10}")
+
+
+def check_overlaps(strong_labels: Path, weak_labels: Path) -> None:
+    """Checks overlaps between used datasets.
+
+    Assumption:
+    - The file at `strong_labels` has a path with columns 'domain', 'pc1' (to be changed to 'label' when we merge with other sources than DQR)
+    - The file at `weak_labels` has columns 'domain' and 'label', label = 0 for phishing, label = 1 for legitimate
+
+    """
+    strong = _load_domains(strong_labels)
+    weak = _load_domains(weak_labels)
+
+    overlap = strong & weak
+    union = strong | weak
+
+    print(f'# strong: {len(strong)}')
+    print(f'# weak: {len(weak)}')
+    print(f'# overlap: {len(overlap)}')
+    print(f'# union: {len(union)}')
 
 
 def main() -> None:
@@ -379,11 +422,13 @@ def main() -> None:
     class_proc = classification_dir / 'processed'
 
     regression_dir / 'raw'
-    reg_proc = regression_dir / 'processed'
-    dataset_sources: Dict[str, Dict[str, float]] = {}
+    regression_dir / 'processed'
+
+    # Track domain counts per dataset
+    dataset_stats = {}
 
     print('======= LegitPhish ========')
-    dataset_sources['legit-phish'] = process_csv(
+    dataset_stats['legit-phish'] = process_csv(
         Path(f'{class_raw}/url_features_extracted1.csv'),
         Path(f'{class_proc}/legit-phish.csv'),
         is_url=True,
@@ -393,7 +438,7 @@ def main() -> None:
     )
 
     print('======= PhishDataset ========')
-    dataset_sources['phish-dataset'] = process_csv(
+    dataset_stats['phish-dataset'] = process_csv(
         Path(f'{class_raw}/data_imbal.csv'),
         Path(f'{class_proc}/phish-dataset.csv'),
         is_url=True,
@@ -403,20 +448,20 @@ def main() -> None:
     )
 
     print('======= Nelez ========')
-    dataset_sources['nelez'] = process_unlabelled_csv(
+    dataset_stats['nelez'] = process_unlabelled_csv(
         Path(f'{class_raw}/dezinformacni_weby (2).csv'),
         Path(f'{class_proc}/nelez.csv'),
         is_legit=False,
     )
 
     print('======= wiki ========')
-    dataset_sources['wikipedia'] = process_goggle(
+    dataset_stats['wikipedia'] = process_goggle(
         Path(f'{class_raw}/wikipedia-reliable-sources.goggle'),
         Path(f'{class_proc}/wikipedia.csv'),
     )
 
     print('======= URL-Phish ========')
-    dataset_sources['url-phish'] = process_csv(
+    dataset_stats['url-phish'] = process_csv(
         Path(f'{class_raw}/Dataset.csv'),
         Path(f'{class_proc}/url-phish.csv'),
         is_url=True,
@@ -426,7 +471,7 @@ def main() -> None:
     )
 
     print('======== Phish&Legit =======')
-    dataset_sources['phish-and-legit'] = process_csv(
+    dataset_stats['phish-and-legit'] = process_csv(
         Path(f'{class_raw}/new_data_urls.csv'),
         Path(f'{class_proc}/phish-and-legit.csv'),
         is_url=True,
@@ -436,7 +481,7 @@ def main() -> None:
     )
 
     print('======== Misinformation domains =========')
-    dataset_sources['misinfo-domains'] = process_csv(
+    dataset_stats['misinfo-domains'] = process_csv(
         Path(f'{class_raw}/domain_list_clean.csv'),
         Path(f'{class_proc}/misinfo-domains.csv'),
         is_url=False,
@@ -446,58 +491,41 @@ def main() -> None:
         labels=['unreliable', 'reliable'],
     )
 
-    print('======== URLHaus malware =========')
-    dataset_sources['urlhaus'] = process_urlhaus(
+    print('======== URLhaus =========')
+    dataset_stats['urlhaus'] = process_csv(
         Path(f'{class_raw}/urlhaus.csv'),
         Path(f'{class_proc}/urlhaus.csv'),
+        is_url=True,
+        domain_col='url',
+        label_col='threat',
+        inverse=False,
+        labels=['malware_download', '_unused_'],
     )
 
     print('======== Merging final labels =========')
     merge_processed_labels(
         class_proc,
         Path(f'{class_proc}/labels.csv'),
-        annotated_csv=Path(f'{class_proc}/labels_annot.csv'),
-    )
-
-    print('======== Merging with reg scores =========')
-    merge_reg_class(
-        Path(f'{class_proc}/labels.csv'),
-        Path(f'{reg_proc}/domain_pc1.csv'),
-        Path(f'{data_dir}/labels.csv'),
-    )
-
-    # drop_invalid_domains(Path(f'{data_dir}/labels.csv'))
-
-    print('======== Creating final CSVs =========')
-    final_domains = sorted(read_weak_labels(Path(f'{class_proc}/labels.csv')).keys())
-    create_merged_annotated(
-        final_domains,
-        dataset_sources,
         Path(f'{data_dir}/labels_annot.csv'),
-        weak_labels=read_weak_labels(Path(f'{class_proc}/labels.csv')),
-        reg_scores=read_reg_scores(Path(f'{reg_proc}/domain_pc1.csv')),
     )
 
-    create_labels_csv(
-        dataset_sources=dataset_sources,
-        reg_scores=read_reg_scores(Path(f'{reg_proc}/domain_pc1.csv')),
-        output_csv=Path(f'{data_dir}/labels.csv'),
+    print_domain_composition(dataset_stats, domains)
+
+    check_overlaps(
+        Path('./data/dqr/domain_pc1.csv'),
+        Path(f'{class_proc}/labels.csv'),
     )
 
     path = Path('data/labels.csv')
 
     total = 0
-    non_null = 0
 
     with path.open('r', encoding='utf-8') as f:
         reader = csv.DictReader(f)
         for row in reader:
             total += 1
-            if row.get('reg_score') not in (None, '', 'NA'):
-                non_null += 1
 
     print(f'Total rows: {total}')
-    print(f'Rows with reg_score: {non_null}')
 
 
 if __name__ == '__main__':
