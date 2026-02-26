@@ -323,7 +323,7 @@ def merge_reg_class(
     output_csv: Path,
 ) -> None:
     """Final output schema:
-    domain, weak_label, reg_score
+    domain, bin, reg
         - Many domains only have one of the two, then the other is None.
     """
     weak = read_weak_labels(weak_labels_csv)
@@ -333,7 +333,7 @@ def merge_reg_class(
 
     with output_csv.open('w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow(['domain', 'weak_label', 'reg_score'])
+        writer.writerow(['domain', 'bin', 'reg'])
 
         for domain in all_domains:
             writer.writerow(
@@ -507,6 +507,13 @@ def main() -> None:
         class_proc,
         Path(f'{class_proc}/labels.csv'),
         Path(f'{data_dir}/labels_annot.csv'),
+    )
+
+    print('======== Merging regression and classification =========')
+    merge_reg_class(
+        Path(f'{class_proc}/labels.csv'),
+        Path(f'{data_dir}/dqr/domain_pc1.csv'),
+        Path(f'{data_dir}/labels.csv'),
     )
 
     print_domain_composition(dataset_stats, domains)
